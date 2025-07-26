@@ -365,7 +365,7 @@ const App = () => {
     }
   }, [isActive, intervalValue, intervalUnit]);
 
-  // Start reminders
+  // Enhanced start reminders with background support
   const startReminders = async () => {
     if (!reminderText.trim()) {
       alert("Please enter a reminder message!");
@@ -378,32 +378,56 @@ const App = () => {
       return;
     }
 
-    // Request permission if not granted
+    // Enhanced permission check with proper user interaction
     if (notificationPermission !== "granted") {
+      console.log('Requesting notification permission from user interaction');
       const granted = await requestNotificationPermission();
       if (!granted) {
-        alert("Notifications are required for reminders to work. Please enable them in your browser settings.");
+        console.log('Notification permission not granted, cannot start reminders');
         return;
       }
     }
 
+    const reminderId = Date.now().toString();
+    reminderIdRef.current = reminderId;
+    
     setIsActive(true);
     setNextReminderTime(calculateNextReminderTime());
+    
+    console.log('Starting enhanced reminders with background support');
     
     // Show first notification immediately
     showNotification();
     
-    // Set up recurring notifications
+    // Start background reminders via service worker for better persistence
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'START_BACKGROUND_REMINDERS',
+        text: reminderText,
+        interval: getIntervalMs(),
+        id: reminderId
+      });
+      console.log('Background reminders started via service worker');
+    }
+    
+    // Also maintain main thread interval as backup
     intervalRef.current = setInterval(() => {
-      showNotification();
+      if (document.visibilityState === 'visible') {
+        // Only show notifications from main thread when app is visible
+        // Service worker handles background notifications
+        showNotification();
+      }
     }, getIntervalMs());
   };
 
-  // Stop reminders
+  // Enhanced stop reminders
   const stopReminders = () => {
+    console.log('Stopping all reminders');
+    
     setIsActive(false);
     setNextReminderTime(null);
     
+    // Stop main thread interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -412,6 +436,15 @@ const App = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    
+    // Stop background reminders via service worker
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'STOP_BACKGROUND_REMINDERS',
+        id: reminderIdRef.current
+      });
+      console.log('Background reminders stopped via service worker');
     }
   };
 
