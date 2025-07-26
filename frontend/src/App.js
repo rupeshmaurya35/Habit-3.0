@@ -9,30 +9,39 @@ const App = () => {
   const [notificationPermission, setNotificationPermission] = useState("default");
   const [nextReminderTime, setNextReminderTime] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [permissionDeniedCount, setPermissionDeniedCount] = useState(0);
+  const [showPermissionHelp, setShowPermissionHelp] = useState(false);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const deferredPrompt = useRef(null);
+  const reminderIdRef = useRef(Date.now());
+  const keepAliveIntervalRef = useRef(null);
 
   // Calculate interval in milliseconds
   const getIntervalMs = () => {
     return intervalUnit === "seconds" ? intervalValue * 1000 : intervalValue * 60 * 1000;
   };
 
-  // Check notification permission on component mount
+  // Enhanced notification permission check with better user interaction handling
   useEffect(() => {
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
+      
+      // Check if user has denied permission multiple times
+      const deniedCount = parseInt(localStorage.getItem('notificationDeniedCount') || '0');
+      setPermissionDeniedCount(deniedCount);
+      
+      if (deniedCount >= 2 && Notification.permission === 'denied') {
+        setShowPermissionHelp(true);
+      }
     }
 
     // Handle PWA install prompt
     const handleBeforeInstallPrompt = (e) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Save the event so it can be triggered later
       deferredPrompt.current = e;
-      // Show the install button
       setShowInstallPrompt(true);
-      console.log('Install prompt available');
+      console.log('PWA install prompt available');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -41,14 +50,14 @@ const App = () => {
     if (window.matchMedia('(display-mode: standalone)').matches || 
         window.navigator.standalone === true) {
       setShowInstallPrompt(false);
-      console.log('App is already installed');
+      console.log('PWA is installed and running in standalone mode');
     }
 
-    // Enhanced service worker registration with proper handling
+    // Enhanced service worker registration with better background persistence
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
         .then((registration) => {
-          console.log('SW registered successfully:', registration);
+          console.log('Service Worker registered successfully:', registration);
           
           // Handle service worker updates
           registration.addEventListener('updatefound', () => {
@@ -56,22 +65,70 @@ const App = () => {
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New service worker installed, refreshing...');
-                  window.location.reload();
+                  console.log('New service worker installed');
+                  // Don't auto-refresh, let user decide
                 }
               });
             }
           });
+          
+          // Keep service worker alive with periodic messages
+          if (registration.active) {
+            startKeepAlive();
+          }
         })
         .catch((error) => {
-          console.log('SW registration failed:', error);
+          console.error('Service Worker registration failed:', error);
         });
     }
 
+    // Handle page visibility changes for better background behavior
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('App went to background - service worker should maintain reminders');
+      } else {
+        console.log('App came to foreground');
+        // Sync state with service worker
+        if (isActive) {
+          setNextReminderTime(calculateNextReminderTime());
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopKeepAlive();
     };
   }, []);
+
+  // Keep service worker alive
+  const startKeepAlive = () => {
+    keepAliveIntervalRef.current = setInterval(() => {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = (event) => {
+          if (event.data.type === 'KEEP_ALIVE_ACK') {
+            console.log('Service worker is alive');
+          }
+        };
+        
+        navigator.serviceWorker.controller.postMessage(
+          { type: 'KEEP_ALIVE' },
+          [messageChannel.port2]
+        );
+      }
+    }, 25000); // Every 25 seconds
+  };
+
+  const stopKeepAlive = () => {
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
+    }
+  };
 
   // Enhanced PWA installation with better Android support
   const handleInstallClick = async () => {
