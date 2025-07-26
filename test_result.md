@@ -248,11 +248,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Enhanced notification permission system with user interaction"
-    - "Background persistence and service worker enhancements"
-    - "Static single-page UI layout"
-    - "Enhanced PWA manifest for better background behavior"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
