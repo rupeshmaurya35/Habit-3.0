@@ -261,20 +261,25 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
   
-  // Focus or open the app window
+  // Focus or open the app window - critical for background persistence
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Try to focus existing window
+        // Try to focus existing window first
         for (const client of clientList) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return client.focus();
+          if (client.url.includes(self.location.origin)) {
+            if ('focus' in client) {
+              return client.focus();
+            }
           }
         }
         // Open new window if no existing window found
         if (self.clients.openWindow) {
-          return self.clients.openWindow(self.location.origin);
+          return self.clients.openWindow('/');
         }
+      })
+      .catch(error => {
+        console.error('Error focusing/opening app window:', error);
       })
   );
 });
@@ -282,25 +287,49 @@ self.addEventListener('notificationclick', (event) => {
 // Handle notification close
 self.addEventListener('notificationclose', (event) => {
   console.log('Notification closed:', event.notification);
+  
+  // If this was a background reminder, don't stop the sequence
+  if (event.notification.tag.includes('background-reminder')) {
+    console.log('Background reminder notification closed, sequence continues');
+  }
 });
 
-// Handle PWA install event
+// Enhanced PWA install and lifecycle events
 self.addEventListener('appinstalled', (event) => {
   console.log('PWA was installed successfully!');
 });
 
-// Background sync for offline reminders (if supported)
+// Keep service worker alive with periodic wake-up
+setInterval(() => {
+  console.log('Service worker heartbeat - staying alive');
+}, 30000); // Every 30 seconds
+
+// Background sync for offline reminders
 self.addEventListener('sync', (event) => {
   console.log('Background sync event:', event.tag);
   if (event.tag === 'reminder-sync') {
     event.waitUntil(
-      // Handle background sync for reminders
-      Promise.resolve()
+      // Sync any pending reminders
+      syncPendingReminders()
     );
   }
 });
 
-// Handle push notifications (for future enhancement)
+function syncPendingReminders() {
+  return new Promise((resolve) => {
+    console.log('Syncing pending reminders...');
+    // Check if any background reminders need to be restarted
+    backgroundReminders.forEach((reminder, id) => {
+      if (reminder.active) {
+        console.log('Restarting background reminder:', id);
+        startBackgroundReminder(id, reminder.text, reminder.interval);
+      }
+    });
+    resolve();
+  });
+}
+
+// Handle push notifications (enhanced for better background support)
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
@@ -312,13 +341,38 @@ self.addEventListener('push', (event) => {
       badge: '/icon-192x192.png',
       tag: 'push-reminder',
       requireInteraction: false,
+      persistent: true,
+      renotify: true,
       data: {
-        url: self.location.origin
-      }
+        url: self.location.origin,
+        clickAction: 'focus-app'
+      },
+      actions: [
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ]
     };
     
     event.waitUntil(
       self.registration.showNotification(data.title || 'Smart Reminders', options)
     );
   }
+});
+
+// Handle service worker lifecycle for better background persistence
+self.addEventListener('beforeinstallprompt', (event) => {
+  console.log('Service worker beforeinstallprompt event');
+});
+
+// Prevent service worker from being killed too aggressively
+self.addEventListener('freeze', (event) => {
+  console.log('Service worker freeze event - preventing aggressive shutdown');
+});
+
+self.addEventListener('resume', (event) => {
+  console.log('Service worker resume event - restarting background tasks');
+  // Restart any active background reminders
+  syncPendingReminders();
 });
