@@ -97,7 +97,7 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, tag } = event.data;
     
-    // Show system notification (appears in notification bar)
+    // Show persistent system notification (appears even when app is closed)
     self.registration.showNotification(title, {
       body: body,
       icon: '/icon-192x192.png',
@@ -105,19 +105,23 @@ self.addEventListener('message', (event) => {
       tag: tag || 'reminder',
       requireInteraction: false,
       silent: false,
+      persistent: true, // Keep notification persistent
+      renotify: true, // Allow renotification with same tag
       timestamp: Date.now(),
       data: {
         url: self.location.origin,
-        dismissTime: Date.now() + 10000 // Auto dismiss after 10 seconds
+        dismissTime: Date.now() + 10000, // Auto dismiss after 10 seconds
+        clickAction: 'focus-app'
       },
       actions: [
         {
           action: 'dismiss',
-          title: 'Dismiss'
+          title: 'Dismiss',
+          icon: '/icon-192x192.png'
         }
       ]
     }).then(() => {
-      console.log('System notification shown');
+      console.log('Persistent system notification shown');
       
       // Auto dismiss after 10 seconds
       setTimeout(() => {
@@ -126,13 +130,49 @@ self.addEventListener('message', (event) => {
             notifications.forEach(notification => {
               if (notification.data && Date.now() >= notification.data.dismissTime) {
                 notification.close();
-                console.log('Notification auto-dismissed');
+                console.log('Notification auto-dismissed after 10 seconds');
               }
             });
           });
       }, 10000);
     }).catch(error => {
-      console.error('Error showing notification:', error);
+      console.error('Error showing persistent notification:', error);
+    });
+  }
+  
+  // Handle background reminder setup
+  if (event.data && event.data.type === 'START_BACKGROUND_REMINDERS') {
+    const { text, interval, id } = event.data;
+    console.log('Starting background reminders:', { text, interval, id });
+    
+    // Store reminder in service worker memory
+    backgroundReminders.set(id, {
+      text,
+      interval,
+      active: true,
+      lastNotification: Date.now()
+    });
+    
+    // Start background reminder loop
+    startBackgroundReminder(id, text, interval);
+  }
+  
+  // Handle stopping background reminders
+  if (event.data && event.data.type === 'STOP_BACKGROUND_REMINDERS') {
+    const { id } = event.data;
+    console.log('Stopping background reminders:', id);
+    
+    if (backgroundReminders.has(id)) {
+      backgroundReminders.delete(id);
+    }
+    
+    // Clear any existing notifications
+    self.registration.getNotifications().then(notifications => {
+      notifications.forEach(notification => {
+        if (notification.tag.includes('reminder')) {
+          notification.close();
+        }
+      });
     });
   }
   
@@ -140,7 +180,75 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  // Handle keep alive ping
+  if (event.data && event.data.type === 'KEEP_ALIVE') {
+    console.log('Service worker keep alive ping received');
+    // Send acknowledgment back to main thread
+    event.ports[0].postMessage({ type: 'KEEP_ALIVE_ACK' });
+  }
 });
+
+// Background reminder function
+function startBackgroundReminder(id, text, intervalMs) {
+  const reminder = backgroundReminders.get(id);
+  if (!reminder || !reminder.active) {
+    return;
+  }
+  
+  // Show notification
+  self.registration.showNotification('Smart Reminder', {
+    body: text,
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: `background-reminder-${id}`,
+    requireInteraction: false,
+    silent: false,
+    persistent: true,
+    renotify: true,
+    timestamp: Date.now(),
+    data: {
+      url: self.location.origin,
+      dismissTime: Date.now() + 10000,
+      reminderId: id
+    },
+    actions: [
+      {
+        action: 'dismiss',
+        title: 'Dismiss'
+      }
+    ]
+  }).then(() => {
+    console.log('Background reminder notification shown');
+    
+    // Schedule next reminder
+    setTimeout(() => {
+      if (backgroundReminders.has(id) && backgroundReminders.get(id).active) {
+        startBackgroundReminder(id, text, intervalMs);
+      }
+    }, intervalMs);
+    
+    // Auto dismiss after 10 seconds
+    setTimeout(() => {
+      self.registration.getNotifications({ tag: `background-reminder-${id}` })
+        .then(notifications => {
+          notifications.forEach(notification => {
+            if (notification.data && Date.now() >= notification.data.dismissTime) {
+              notification.close();
+            }
+          });
+        });
+    }, 10000);
+  }).catch(error => {
+    console.error('Error showing background reminder:', error);
+    // Retry after a short delay
+    setTimeout(() => {
+      if (backgroundReminders.has(id) && backgroundReminders.get(id).active) {
+        startBackgroundReminder(id, text, intervalMs);
+      }
+    }, intervalMs);
+  });
+}
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
