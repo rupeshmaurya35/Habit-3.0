@@ -11,6 +11,7 @@
   "lang": "en",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
+  "related_applications": [],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -45,8 +46,19 @@
       ]
     }
   ],
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "launch_handler": {
-    "client_mode": "navigate-new"
-  }
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": "400"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+reminder",
+      "url": "/?reminder=%s"
+    }
+  ],
+  "handle_links": "preferred",
+  "capture_links": "existing-client-navigate"
 }
