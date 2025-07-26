@@ -1,6 +1,6 @@
-/* Enhanced Service Worker for Smart Reminders PWA - System Notifications & Install Support */
+/* Enhanced Service Worker for Smart Reminders PWA - Background Persistence & System Notifications */
 
-const CACHE_NAME = 'smart-reminders-v3';
+const CACHE_NAME = 'smart-reminders-v4';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -11,6 +11,9 @@ const urlsToCache = [
   '/apple-touch-icon.png',
   '/favicon.ico'
 ];
+
+// Global state for background reminders
+let backgroundReminders = new Map();
 
 // Install service worker
 self.addEventListener('install', (event) => {
