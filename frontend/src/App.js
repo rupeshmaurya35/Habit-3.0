@@ -205,17 +205,84 @@ const App = () => {
     }
   };
 
-  // Request notification permission
+  // Enhanced notification permission request with proper user interaction handling
   const requestNotificationPermission = async () => {
-    if ("Notification" in window) {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      return permission === "granted";
+    if (!("Notification" in window)) {
+      alert("This browser doesn't support notifications");
+      return false;
     }
-    return false;
+
+    // Check current permission status
+    const currentPermission = Notification.permission;
+    console.log('Current notification permission:', currentPermission);
+
+    if (currentPermission === "granted") {
+      setNotificationPermission("granted");
+      return true;
+    }
+
+    if (currentPermission === "denied") {
+      // Handle denied permissions with better user guidance
+      const deniedCount = permissionDeniedCount + 1;
+      setPermissionDeniedCount(deniedCount);
+      localStorage.setItem('notificationDeniedCount', deniedCount.toString());
+      
+      if (deniedCount >= 2) {
+        setShowPermissionHelp(true);
+        alert(
+          "Notification permissions have been denied. To enable notifications:\n\n" +
+          "1. Click the lock icon (🔒) in your browser's address bar\n" +
+          "2. Find 'Notifications' and set it to 'Allow'\n" +
+          "3. Refresh the page and try again\n\n" +
+          "Or check your browser settings for this site."
+        );
+      } else {
+        alert(
+          "Notifications are currently blocked. Please allow notifications for reminders to work properly.\n\n" +
+          "Click the lock icon in your browser's address bar to change this setting."
+        );
+      }
+      return false;
+    }
+
+    try {
+      // Request permission - this MUST be called from a user interaction
+      const permission = await Notification.requestPermission();
+      console.log('Notification permission request result:', permission);
+      
+      setNotificationPermission(permission);
+      
+      if (permission === "granted") {
+        console.log("Notification permission granted!");
+        // Reset denied count on successful grant
+        setPermissionDeniedCount(0);
+        localStorage.removeItem('notificationDeniedCount');
+        setShowPermissionHelp(false);
+        return true;
+      } else if (permission === "denied") {
+        const deniedCount = permissionDeniedCount + 1;
+        setPermissionDeniedCount(deniedCount);
+        localStorage.setItem('notificationDeniedCount', deniedCount.toString());
+        
+        alert(
+          "Notification permission was denied. To enable notifications:\n\n" +
+          "1. Click the lock icon (🔒) in your browser's address bar\n" +
+          "2. Set 'Notifications' to 'Allow'\n" +
+          "3. Refresh the page and try again"
+        );
+        return false;
+      } else {
+        console.log("Notification permission dismissed");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+      alert("Failed to request notification permission. Please try again.");
+      return false;
+    }
   };
 
-  // Show notification with auto-dismiss (via Service Worker for system notifications)
+  // Enhanced notification system with background support
   const showNotification = () => {
     try {
       if (!("Notification" in window)) {
@@ -224,23 +291,24 @@ const App = () => {
       }
 
       if (Notification.permission !== "granted") {
-        console.log("Notification permission not granted");
+        console.log("Notification permission not granted:", Notification.permission);
         return;
       }
 
-      // Use service worker for system notifications (appears in notification bar)
+      // Use service worker for persistent background notifications
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        // Send message to service worker to show system notification
+        // Send message to service worker for persistent notification
         navigator.serviceWorker.controller.postMessage({
           type: 'SHOW_NOTIFICATION',
           title: 'Smart Reminder',
           body: reminderText,
           tag: 'reminder-' + Date.now()
         });
-        console.log('System notification requested via service worker');
+        console.log('Persistent notification requested via service worker');
       } else {
-        // Fallback to web notification if service worker not available
-        console.log('Service worker not available, using fallback notification');
+        console.log('Service worker not ready, using fallback notification');
+        
+        // Fallback to regular web notification
         const notification = new Notification("Smart Reminder", {
           body: reminderText,
           icon: "/icon-192x192.png",
@@ -248,7 +316,8 @@ const App = () => {
           tag: "reminder-notification",
           requireInteraction: false,
           silent: false,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          renotify: true
         });
 
         // Auto-dismiss after 10 seconds
@@ -274,10 +343,6 @@ const App = () => {
 
     } catch (error) {
       console.error("Error creating notification:", error);
-      // Fallback: show alert on mobile if notifications fail
-      if (confirm("Reminder: " + reminderText + "\n\nClick OK to acknowledge.")) {
-        // User acknowledged
-      }
     }
   };
 
