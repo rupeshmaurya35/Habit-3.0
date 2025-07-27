@@ -326,7 +326,7 @@ function syncPendingReminders() {
     backgroundReminders.forEach((reminder, id) => {
       if (reminder.active) {
         console.log('Restarting background reminder:', id);
-        startBackgroundReminder(id, reminder.text, reminder.interval);
+        startBackgroundReminder(id, reminder.text, reminder.interval, reminder.duration);
       }
     });
     resolve();
