@@ -466,7 +466,13 @@ const App = () => {
     
     console.log('Starting enhanced reminders with background support');
     
-    // Show first notification immediately
+    // Show first notification immediately and add to history
+    const reminderEntry = {
+      text: reminderText,
+      interval: getIntervalMs(),
+      duration: getNotificationDurationMs()
+    };
+    LocalStorage.addReminderToHistory(reminderEntry);
     showNotification();
     
     // Start background reminders via service worker for better persistence
@@ -475,6 +481,7 @@ const App = () => {
         type: 'START_BACKGROUND_REMINDERS',
         text: reminderText,
         interval: getIntervalMs(),
+        duration: getNotificationDurationMs(),
         id: reminderId
       });
       console.log('Background reminders started via service worker');
