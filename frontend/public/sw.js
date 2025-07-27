@@ -228,7 +228,7 @@ function startBackgroundReminder(id, text, intervalMs) {
       }
     }, intervalMs);
     
-    // Auto dismiss after 10 seconds
+    // Auto dismiss after 5 seconds
     setTimeout(() => {
       self.registration.getNotifications({ tag: `background-reminder-${id}` })
         .then(notifications => {
@@ -238,7 +238,7 @@ function startBackgroundReminder(id, text, intervalMs) {
             }
           });
         });
-    }, 10000);
+    }, 5000);
   }).catch(error => {
     console.error('Error showing background reminder:', error);
     // Retry after a short delay
