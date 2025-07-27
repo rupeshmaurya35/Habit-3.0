@@ -1,10 +1,63 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 
+// Local Storage utility functions for offline functionality
+const LocalStorage = {
+  // Save reminder settings
+  saveReminderSettings: (settings) => {
+    localStorage.setItem('reminderSettings', JSON.stringify(settings));
+  },
+  
+  // Load reminder settings
+  loadReminderSettings: () => {
+    const settings = localStorage.getItem('reminderSettings');
+    return settings ? JSON.parse(settings) : {
+      text: "Time to take a break!",
+      intervalValue: 5,
+      intervalUnit: "minutes",
+      notificationDuration: 10 // Default 10 seconds
+    };
+  },
+  
+  // Save reminders history (for future features)
+  saveRemindersHistory: (reminders) => {
+    localStorage.setItem('remindersHistory', JSON.stringify(reminders));
+  },
+  
+  // Load reminders history
+  loadRemindersHistory: () => {
+    const history = localStorage.getItem('remindersHistory');
+    return history ? JSON.parse(history) : [];
+  },
+  
+  // Add reminder to history
+  addReminderToHistory: (reminder) => {
+    const history = LocalStorage.loadRemindersHistory();
+    const newReminder = {
+      id: Date.now().toString(),
+      text: reminder.text,
+      interval: reminder.interval,
+      timestamp: new Date().toISOString(),
+      duration: reminder.duration
+    };
+    history.unshift(newReminder);
+    // Keep only last 50 reminders
+    if (history.length > 50) {
+      history.splice(50);
+    }
+    LocalStorage.saveRemindersHistory(history);
+    return newReminder;
+  }
+};
+
 const App = () => {
-  const [reminderText, setReminderText] = useState("Time to take a break!");
-  const [intervalValue, setIntervalValue] = useState(5);
-  const [intervalUnit, setIntervalUnit] = useState("minutes"); // "seconds" or "minutes"
+  // Load initial settings from localStorage
+  const initialSettings = LocalStorage.loadReminderSettings();
+  
+  const [reminderText, setReminderText] = useState(initialSettings.text);
+  const [intervalValue, setIntervalValue] = useState(initialSettings.intervalValue);
+  const [intervalUnit, setIntervalUnit] = useState(initialSettings.intervalUnit);
+  const [notificationDuration, setNotificationDuration] = useState(initialSettings.notificationDuration);
   const [isActive, setIsActive] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState("default");
   const [nextReminderTime, setNextReminderTime] = useState(null);
