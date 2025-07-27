@@ -320,14 +320,14 @@ const App = () => {
           renotify: true
         });
 
-        // Auto-dismiss after 10 seconds
+        // Auto-dismiss after 5 seconds
         setTimeout(() => {
           try {
             notification.close();
           } catch (e) {
             console.log("Error closing notification:", e);
           }
-        }, 10000);
+        }, 5000);
 
         // Handle notification click
         notification.onclick = function(event) {
