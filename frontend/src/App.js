@@ -629,7 +629,7 @@ const App = () => {
             </div>
 
             {/* Interval Dropdown - Compact */}
-            <div className="mb-4">
+            <div className="mb-3">
               <label htmlFor="interval" className="block text-xs font-medium text-gray-700 mb-1">
                 Reminder Interval
               </label>
@@ -652,6 +652,36 @@ const App = () => {
                     return (
                       <option key={`${minutes}-minutes`} value={`${minutes}-minutes`}>
                         {minutes} minute{minutes > 1 ? 's' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification Duration Dropdown - New Feature */}
+            <div className="mb-4">
+              <label htmlFor="notificationDuration" className="block text-xs font-medium text-gray-700 mb-1">
+                Notification Duration
+              </label>
+              <div className="relative">
+                <select
+                  id="notificationDuration"
+                  value={notificationDuration}
+                  onChange={(e) => setNotificationDuration(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-gray-900 appearance-none cursor-pointer text-sm"
+                  disabled={isActive}
+                >
+                  {[...Array(20)].map((_, index) => {
+                    const seconds = index + 1;
+                    return (
+                      <option key={seconds} value={seconds}>
+                        {seconds} second{seconds > 1 ? 's' : ''}
                       </option>
                     );
                   })}
