@@ -110,7 +110,7 @@ self.addEventListener('message', (event) => {
       timestamp: Date.now(),
       data: {
         url: self.location.origin,
-        dismissTime: Date.now() + 10000, // Auto dismiss after 10 seconds
+        dismissTime: Date.now() + 5000, // Auto dismiss after 5 seconds
         clickAction: 'focus-app'
       },
       actions: [
