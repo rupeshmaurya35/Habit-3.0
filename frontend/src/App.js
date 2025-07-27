@@ -371,7 +371,8 @@ const App = () => {
           type: 'SHOW_NOTIFICATION',
           title: 'Smart Reminder',
           body: reminderText,
-          tag: 'reminder-' + Date.now()
+          tag: 'reminder-' + Date.now(),
+          duration: getNotificationDurationMs()
         });
         console.log('Persistent notification requested via service worker');
       } else {
