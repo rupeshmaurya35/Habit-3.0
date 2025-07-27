@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Created-By: Smart Reminders APK Generator
+Package-Name: com.smartreminders.app
+Package-Version: 1.0.0
+Application-Name: Smart Reminders
+Application-Version: 1.0.0
+Min-SDK-Version: 21
+Target-SDK-Version: 34

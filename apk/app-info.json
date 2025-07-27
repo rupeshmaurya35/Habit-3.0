@@ -1,0 +1,30 @@
+{
+  "name": "Smart Reminders",
+  "package": "com.smartreminders.app",
+  "version": "1.0.0",
+  "description": "Offline Smart Reminders PWA packaged as APK",
+  "features": [
+    "Offline functionality",
+    "Local storage",
+    "Push notifications",
+    "Background timers",
+    "Customizable notification duration",
+    "PWA install support"
+  ],
+  "permissions": [
+    "VIBRATE",
+    "WAKE_LOCK",
+    "RECEIVE_BOOT_COMPLETED",
+    "NOTIFICATION_SERVICE"
+  ],
+  "installation": {
+    "type": "Web App Package",
+    "instructions": "This is a packaged web app that can be installed as a PWA on Android devices"
+  },
+  "technical": {
+    "offline": true,
+    "storage": "localStorage",
+    "notifications": "Web Notifications API",
+    "background": "Service Worker"
+  }
+}
