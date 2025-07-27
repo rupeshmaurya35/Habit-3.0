@@ -143,19 +143,21 @@ self.addEventListener('message', (event) => {
   
   // Handle background reminder setup
   if (event.data && event.data.type === 'START_BACKGROUND_REMINDERS') {
-    const { text, interval, id } = event.data;
-    console.log('Starting background reminders:', { text, interval, id });
+    const { text, interval, duration, id } = event.data;
+    const dismissTime = duration || 10000; // Default 10 seconds if not specified
+    console.log('Starting background reminders:', { text, interval, duration, id });
     
     // Store reminder in service worker memory
     backgroundReminders.set(id, {
       text,
       interval,
+      duration: dismissTime,
       active: true,
       lastNotification: Date.now()
     });
     
     // Start background reminder loop
-    startBackgroundReminder(id, text, interval);
+    startBackgroundReminder(id, text, interval, dismissTime);
   }
   
   // Handle stopping background reminders
