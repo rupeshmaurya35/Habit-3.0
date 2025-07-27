@@ -123,18 +123,18 @@ self.addEventListener('message', (event) => {
     }).then(() => {
       console.log('Persistent system notification shown');
       
-      // Auto dismiss after 10 seconds
+      // Auto dismiss after 5 seconds
       setTimeout(() => {
         self.registration.getNotifications({ tag: tag || 'reminder' })
           .then(notifications => {
             notifications.forEach(notification => {
               if (notification.data && Date.now() >= notification.data.dismissTime) {
                 notification.close();
-                console.log('Notification auto-dismissed after 10 seconds');
+                console.log('Notification auto-dismissed after 5 seconds');
               }
             });
           });
-      }, 10000);
+      }, 5000);
     }).catch(error => {
       console.error('Error showing persistent notification:', error);
     });
