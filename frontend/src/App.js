@@ -725,7 +725,7 @@ const App = () => {
               {/* Info - Very Compact */}
               <div className="mt-2 text-center">
                 <p className="text-xs text-gray-500">
-                  Works in background • Auto-dismiss in 10s
+                  Works in background • Auto-dismiss in {notificationDuration}s
                 </p>
               </div>
             </div>
