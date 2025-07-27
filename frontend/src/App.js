@@ -70,9 +70,25 @@ const App = () => {
   const reminderIdRef = useRef(Date.now());
   const keepAliveIntervalRef = useRef(null);
 
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    const settings = {
+      text: reminderText,
+      intervalValue: intervalValue,
+      intervalUnit: intervalUnit,
+      notificationDuration: notificationDuration
+    };
+    LocalStorage.saveReminderSettings(settings);
+  }, [reminderText, intervalValue, intervalUnit, notificationDuration]);
+
   // Calculate interval in milliseconds
   const getIntervalMs = () => {
     return intervalUnit === "seconds" ? intervalValue * 1000 : intervalValue * 60 * 1000;
+  };
+
+  // Get notification duration in milliseconds
+  const getNotificationDurationMs = () => {
+    return notificationDuration * 1000;
   };
 
   // Enhanced notification permission check with better user interaction handling
