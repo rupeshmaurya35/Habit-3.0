@@ -193,7 +193,7 @@ self.addEventListener('message', (event) => {
 });
 
 // Background reminder function
-function startBackgroundReminder(id, text, intervalMs) {
+function startBackgroundReminder(id, text, intervalMs, dismissTimeMs) {
   const reminder = backgroundReminders.get(id);
   if (!reminder || !reminder.active) {
     return;
@@ -212,7 +212,7 @@ function startBackgroundReminder(id, text, intervalMs) {
     timestamp: Date.now(),
     data: {
       url: self.location.origin,
-      dismissTime: Date.now() + 5000,
+      dismissTime: Date.now() + dismissTimeMs,
       reminderId: id
     },
     actions: [
@@ -227,27 +227,28 @@ function startBackgroundReminder(id, text, intervalMs) {
     // Schedule next reminder
     setTimeout(() => {
       if (backgroundReminders.has(id) && backgroundReminders.get(id).active) {
-        startBackgroundReminder(id, text, intervalMs);
+        startBackgroundReminder(id, text, intervalMs, dismissTimeMs);
       }
     }, intervalMs);
     
-    // Auto dismiss after 5 seconds
+    // Auto dismiss after custom duration
     setTimeout(() => {
       self.registration.getNotifications({ tag: `background-reminder-${id}` })
         .then(notifications => {
           notifications.forEach(notification => {
             if (notification.data && Date.now() >= notification.data.dismissTime) {
               notification.close();
+              console.log(`Background notification auto-dismissed after ${dismissTimeMs/1000} seconds`);
             }
           });
         });
-    }, 5000);
+    }, dismissTimeMs);
   }).catch(error => {
     console.error('Error showing background reminder:', error);
     // Retry after a short delay
     setTimeout(() => {
       if (backgroundReminders.has(id) && backgroundReminders.get(id).active) {
-        startBackgroundReminder(id, text, intervalMs);
+        startBackgroundReminder(id, text, intervalMs, dismissTimeMs);
       }
     }, intervalMs);
   });
