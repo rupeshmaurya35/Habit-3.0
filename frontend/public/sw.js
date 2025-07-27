@@ -209,7 +209,7 @@ function startBackgroundReminder(id, text, intervalMs) {
     timestamp: Date.now(),
     data: {
       url: self.location.origin,
-      dismissTime: Date.now() + 10000,
+      dismissTime: Date.now() + 5000,
       reminderId: id
     },
     actions: [
