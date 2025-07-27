@@ -95,7 +95,8 @@ self.addEventListener('message', (event) => {
   console.log('Service Worker received message:', event.data);
   
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, tag } = event.data;
+    const { title, body, tag, duration } = event.data;
+    const dismissTime = duration || 10000; // Default 10 seconds if not specified
     
     // Show persistent system notification (appears even when app is closed)
     self.registration.showNotification(title, {
@@ -110,7 +111,7 @@ self.addEventListener('message', (event) => {
       timestamp: Date.now(),
       data: {
         url: self.location.origin,
-        dismissTime: Date.now() + 5000, // Auto dismiss after 5 seconds
+        dismissTime: Date.now() + dismissTime,
         clickAction: 'focus-app'
       },
       actions: [
@@ -123,18 +124,18 @@ self.addEventListener('message', (event) => {
     }).then(() => {
       console.log('Persistent system notification shown');
       
-      // Auto dismiss after 5 seconds
+      // Auto dismiss after custom duration
       setTimeout(() => {
         self.registration.getNotifications({ tag: tag || 'reminder' })
           .then(notifications => {
             notifications.forEach(notification => {
               if (notification.data && Date.now() >= notification.data.dismissTime) {
                 notification.close();
-                console.log('Notification auto-dismissed after 5 seconds');
+                console.log(`Notification auto-dismissed after ${dismissTime/1000} seconds`);
               }
             });
           });
-      }, 5000);
+      }, dismissTime);
     }).catch(error => {
       console.error('Error showing persistent notification:', error);
     });
